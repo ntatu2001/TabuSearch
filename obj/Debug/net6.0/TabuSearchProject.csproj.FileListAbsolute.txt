@@ -1,0 +1,15 @@
+D:\Visual Studio 2022\Project\TabuSearchProject\bin\Debug\net6.0\TabuSearchProject.exe
+D:\Visual Studio 2022\Project\TabuSearchProject\bin\Debug\net6.0\TabuSearchProject.deps.json
+D:\Visual Studio 2022\Project\TabuSearchProject\bin\Debug\net6.0\TabuSearchProject.runtimeconfig.json
+D:\Visual Studio 2022\Project\TabuSearchProject\bin\Debug\net6.0\TabuSearchProject.dll
+D:\Visual Studio 2022\Project\TabuSearchProject\bin\Debug\net6.0\TabuSearchProject.pdb
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.csproj.AssemblyReference.cache
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.GeneratedMSBuildEditorConfig.editorconfig
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.AssemblyInfoInputs.cache
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.AssemblyInfo.cs
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.csproj.CoreCompileInputs.cache
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.dll
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\refint\TabuSearchProject.dll
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.pdb
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\TabuSearchProject.genruntimeconfig.cache
+D:\Visual Studio 2022\Project\TabuSearchProject\obj\Debug\net6.0\ref\TabuSearchProject.dll

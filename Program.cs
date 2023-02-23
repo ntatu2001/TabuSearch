@@ -225,28 +225,16 @@ namespace ReadDataFromCSV
         /// <param name="solution"></param>
         /// <param name="workTable"></param>
         /// <returns></returns>
-        public static double objectValue(List<int> solution, DataTable workTable)
+        public static double objectValue(List<int> solution, DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
         {
-            DateTime startingDate = DateTime.Now;
+            DateTime startDate = DateTime.Now;
             double objectValue = 0;
             DateTime endDate = DateTime.Now;
             foreach (int job in solution)
             {
-                //Console.WriteLine(job - 1);
-                var monday = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek + (int)DayOfWeek.Monday);
-                if ((job - 1) == 0)
-                {
-                    startingDate = monday;
-                    double minutes = double.Parse((string)workTable.Rows[job - 1]["ExecutionTime"]);
-                    TimeSpan executionTime = TimeSpan.FromMinutes(minutes);
-                    endDate = startingDate.Add(executionTime);
-                }
-                else
-                {
-                    double minutes = double.Parse((string)workTable.Rows[job - 1]["ExecutionTime"]);
-                    TimeSpan executionTime = TimeSpan.FromMinutes(minutes);
-                    endDate = startingDate.Add(executionTime);
-                }
+                List<DateTime> listStartEndWorking = findPlannedDate(workTable, solution, job, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+                startDate = listStartEndWorking[0];
+                endDate = listStartEndWorking[1];
 
                 double differenceMinutes = 0;
                 DateTime dueDate = Convert.ToDateTime((string)workTable.Rows[job - 1]["DueDate"]);
@@ -409,7 +397,7 @@ namespace ReadDataFromCSV
         /// </summary>
         /// <param name="workTable"></param>
         /// <returns></returns>
-        public static List<int> tabuSearch(DataTable workTable)
+        public static List<int> tabuSearch(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
         {
             int tenure = getTenure(workTable);
             List<List<int>> tabuList = new List<List<int>>();
@@ -422,7 +410,7 @@ namespace ReadDataFromCSV
             //}
 
             List<int> currentSolution = initialSolution(workTable);
-            double bestObjectValue = objectValue(currentSolution, workTable);
+            double bestObjectValue = objectValue(currentSolution, workTable,deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
             List<int> bestSolution = currentSolution;
 
             int iterations = 50;
@@ -442,7 +430,7 @@ namespace ReadDataFromCSV
                     //{
                     //    Console.Write(item + " - ");
                     //}
-                    double candidateObjectValue = objectValue(candidateSolution, workTable);
+                    double candidateObjectValue = objectValue(candidateSolution, workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
                     Console.WriteLine(key[0].ToString() + " - " + key[1].ToString());
                     Console.WriteLine(candidateObjectValue);
                     dictTabuAttribute[key] = candidateObjectValue;
@@ -465,7 +453,7 @@ namespace ReadDataFromCSV
                 if (listBestPair.Count > 0)
                 {
                     currentSolution = swapPairs(bestSolution, listBestPair[0], listBestPair[1]);
-                    double currentObjectValue = objectValue(currentSolution, workTable);
+                    double currentObjectValue = objectValue(currentSolution, workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
 
                     if (currentObjectValue < bestObjectValue)
                     {
@@ -495,10 +483,10 @@ namespace ReadDataFromCSV
         /// </summary>
         /// <param name="workTable"></param>
         /// <returns></returns>
-        public static DataTable returnScheduledDataTable(DataTable workTable)
+        public static DataTable returnScheduledDataTable(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
         {
             //Find the order of work such that the objective function value is minimal
-            List<int> bestSolution = tabuSearch(workTable);
+            List<int> bestSolution = tabuSearch(workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
 
             //Create a new data table that includes the jobs sorted by bestSolution
             DataTable scheduledWorkTable = new DataTable();
@@ -544,9 +532,6 @@ namespace ReadDataFromCSV
             Console.WriteLine();
             technicianTable = ReadDataFromTechnicians();
 
-
-            //DataTable scheduledWorkTable = returnScheduledDataTable(workTable);
-
             Dictionary<string, List<List<DateTime>>> deviceDictionary = getDeviceDictionary(deviceTable);
             Dictionary<string, List<List<DateTime>>> technicianDictionary = getTechnicianDictionary(technicianTable);
 
@@ -559,6 +544,8 @@ namespace ReadDataFromCSV
             {
                 List<DateTime> listStartEndWorking = findPlannedDate(workTable, solution, job, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
             }
+
+            //DataTable scheduledWorkTable = returnScheduledDataTable(workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
         }
     }
 }

@@ -21,7 +21,9 @@ namespace ReadDataFromCSV
         /// <returns></returns>
         public static DataTable ReadDataFromWorks()
         {
-            string filePath = @"D:\Scheduling Maintenance\data input\Works.csv";
+            //string filePath = @"D:\Scheduling Maintenance\data input\Works.csv";
+
+            string filePath = @"../../../resources/Works.csv";
             DataTable workTable = new DataTable();
             workTable.Columns.Add("No");
             workTable.Columns.Add("Priority");
@@ -73,7 +75,7 @@ namespace ReadDataFromCSV
         /// <returns></returns>
         public static DataTable ReadDataFromDevices()
         {
-            string filePath = @"D:\Scheduling Maintenance\data input\Devices.csv";
+            string filePath = @"../../../resources/Devices.csv";
             DataTable deviceTable = new DataTable();
             deviceTable.Columns.Add("No");
             deviceTable.Columns.Add("Device");
@@ -122,7 +124,7 @@ namespace ReadDataFromCSV
         /// <returns></returns>
         public static DataTable ReadDataFromTechnicians()
         {
-            string filePath = @"D:\Scheduling Maintenance\data input\Technicians.csv";
+            string filePath = @"../../../resources/Technicians.csv";
             DataTable technicianTable = new DataTable();
             technicianTable.Columns.Add("No");
             technicianTable.Columns.Add("Technician");

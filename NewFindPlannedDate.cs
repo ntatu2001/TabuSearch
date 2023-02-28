@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TabuSearchProject
 {
-    public class FindPlannedDate
+    public class NewFindPlannedDate
     {
         /// <summary>
         /// Create a dictionary containing the break time of each device in a week
@@ -17,7 +16,7 @@ namespace TabuSearchProject
         /// </summary>
         /// <param name="deviceTable"></param>
         /// <returns></returns>
-        public static Dictionary<string, List<List<DateTime>>> getDeviceDictionary (DataTable deviceTable)
+        public static Dictionary<string, List<List<DateTime>>> getDeviceDictionary(DataTable deviceTable)
         {
             Dictionary<string, List<List<DateTime>>> deviceDictionary = new Dictionary<string, List<List<DateTime>>>();
             List<string> listDevice = new List<string>();
@@ -48,7 +47,7 @@ namespace TabuSearchProject
 
             // We divide listDateTimeTemp into listListTimeDevice which add each pair of {From, To}
             List<List<DateTime>> listListTimeDevice = new List<List<DateTime>>();
-            for (int i = 0; i < 24*listDevice.Count; i++)
+            for (int i = 0; i < 24 * listDevice.Count; i++)
             {
                 if (i % 2 == 0)
                 {
@@ -61,7 +60,7 @@ namespace TabuSearchProject
             for (int m = 0; m < listDevice.Count; m++)
             {
                 List<List<DateTime>> listListTemp = new List<List<DateTime>>();
-                for (int index = 12*m; index < 12*(m + 1); index++)
+                for (int index = 12 * m; index < 12 * (m + 1); index++)
                 {
                     listListTemp.Add(listListTimeDevice[index]);
                 }
@@ -201,6 +200,21 @@ namespace TabuSearchProject
             return maintenanceTechnicianWorkTime;
         }
 
+
+        public static List<string> shuffleList(List<string> list)
+        {
+            var random = new Random();
+            var newShuffledList = new List<string>();
+            var listcCount = list.Count;
+            for (int i = 0; i < listcCount; i++)
+            {
+                var randomElementInList = random.Next(0, list.Count);
+                newShuffledList.Add(list[randomElementInList]);
+                list.Remove(list[randomElementInList]);
+            }
+            return newShuffledList;
+        }
+
         /// <summary>
         /// When we have already calculated the planned date, this method to check the available of this date and the seuquence of technician assigned
         /// If everything is ok, return 0
@@ -217,10 +231,10 @@ namespace TabuSearchProject
         /// <param name="maintenanceDeviceBreakTime"></param>
         /// <param name="maintenanceTechnicianWorkTime"></param>
         /// <returns></returns>
-        public static List<int> checkTimeAvailable(string nameOfDevice, List<int> listReturn, List<DateTime> listStartEndWorking, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
+        public static int[] checkTimeAvailable(string nameOfDevice, int[] arrayReturn, List<DateTime> listStartEndWorking, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
         {
             bool checkDeviceAvailable = false;
-            foreach(List<DateTime> listBreakTime in deviceDictionary[nameOfDevice])
+            foreach (List<DateTime> listBreakTime in deviceDictionary[nameOfDevice])
             {
                 if (isInRange(listBreakTime[0], listBreakTime[1], listStartEndWorking[0]) && isInRange(listBreakTime[0], listBreakTime[1], listStartEndWorking[1]))
                 {
@@ -231,9 +245,11 @@ namespace TabuSearchProject
             }
 
             bool checkTechnicianAvailable = false;
-            foreach(string no in technicianDictionary.Keys)
+            List<string> listNoTechnician = technicianDictionary.Keys.ToList();
+            List<string> newListNoTechnician = shuffleList(listNoTechnician);
+            foreach (string no in newListNoTechnician)
             {
-                foreach(List<DateTime> listWorkTime in technicianDictionary[no])
+                foreach (List<DateTime> listWorkTime in technicianDictionary[no])
                 {
                     if (isInRange(listWorkTime[0], listWorkTime[1], listStartEndWorking[0]) && isInRange(listWorkTime[0], listWorkTime[1], listStartEndWorking[1]))
                     {
@@ -243,10 +259,10 @@ namespace TabuSearchProject
                     }
                 }
 
-                if (checkTechnicianAvailable && listReturn[1] == 0 )
+                if (checkTechnicianAvailable && arrayReturn[5] == 0)
                 {
                     // In addtion, assign the sequence of technician perform this job into second element in listReturn
-                    listReturn[1] = int.Parse(no);
+                    arrayReturn[5] = int.Parse(no);
                     break;
                 }
             }
@@ -254,7 +270,7 @@ namespace TabuSearchProject
             if (checkDeviceAvailable && checkTechnicianAvailable)
             {
                 bool checkTechnicianConcur = false;
-                foreach(List<DateTime> listTechnicianWorkTime in maintenanceTechnicianWorkTime[listReturn[1].ToString()])
+                foreach (List<DateTime> listTechnicianWorkTime in maintenanceTechnicianWorkTime[arrayReturn[5].ToString()])
                 {
                     if (isInRange(listTechnicianWorkTime[0], listTechnicianWorkTime[1], listStartEndWorking[0]) || isInRange(listTechnicianWorkTime[0], listTechnicianWorkTime[1], listStartEndWorking[1]))
                     {
@@ -267,8 +283,7 @@ namespace TabuSearchProject
 
                 if (checkTechnicianConcur == true)
                 {
-                    listReturn[0] = 4;
-                    return listReturn;
+                    arrayReturn[4] = 1;
                 }
 
                 bool checkDeviceConcur = false;
@@ -285,32 +300,27 @@ namespace TabuSearchProject
 
                 if (checkDeviceConcur == true)
                 {
-                    listReturn[0] = 3;
-                    return listReturn;
+                    arrayReturn[3] = 1;
                 }
 
                 if (checkDeviceConcur == false && checkTechnicianConcur == false)
                 {
                     // If everything is ok
-                    listReturn[0] = 0;
-                    return listReturn;
+                    arrayReturn[0] = 1;
                 }
             }
             else if (checkDeviceAvailable == false)
             {
                 // If the break time of device is not available, return 1
-                listReturn[0] = 1;
-                return listReturn;
+                arrayReturn[1] = 1;
             }
             else if (checkTechnicianAvailable == false)
             {
                 // If the work time of technician is not available, return 2
-                listReturn[0] = 2;
-                return listReturn;
+                arrayReturn[2] = 1;
             }
 
-            listReturn[0] = 0;
-            return listReturn;
+            return arrayReturn;
         }
 
         /// <summary>
@@ -326,11 +336,11 @@ namespace TabuSearchProject
         /// <param name="maintenanceDeviceBreakTime"></param>
         /// <param name="maintenanceTechnicianWorkTime"></param>
         /// <returns></returns>
-        public static List<DateTime> changePlannedDate(DataTable workTable, int job, string nameOfDevice, List<DateTime> listStartEndWorking, List<int> listReturn, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
+        public static List<DateTime> changePlannedDate(DataTable workTable, int job, string nameOfDevice, List<DateTime> listStartEndWorking, int[] arrayReturn, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
         {
             List<DateTime> newListStartEndWorking = new List<DateTime> { listStartEndWorking[0], listStartEndWorking[1] };
 
-            if (listReturn[0] == 1)
+            if (arrayReturn[1] == 1)
             {
                 // If the break time of device is not available
                 if (maintenanceDeviceBreakTime[nameOfDevice].Count == 0)
@@ -360,7 +370,8 @@ namespace TabuSearchProject
                 TimeSpan executionTime = TimeSpan.FromMinutes(minutes);
                 newListStartEndWorking[1] = newListStartEndWorking[0].Add(executionTime);
             }
-            else if (listReturn[0] == 2)
+            
+            if (arrayReturn[2] == 1)
             {
                 // If the work time of technician is not available
                 foreach (string no in technicianDictionary.Keys)
@@ -369,7 +380,7 @@ namespace TabuSearchProject
                     {
                         // If the start calculated is earlier than the first work time of specific technician, assign it as the first work time of specific technician
                         newListStartEndWorking[0] = technicianDictionary[no][0][0];
-                        listReturn[1] = int.Parse(no);
+                        arrayReturn[5] = int.Parse(no);
                         break;
                     }
                     else
@@ -380,18 +391,19 @@ namespace TabuSearchProject
                             {
                                 // Find the range of start technician's work time and assign the planned start as the next start of work time
                                 newListStartEndWorking[0] = technicianDictionary[no][i + 1][0];
-                                listReturn[1] = int.Parse(no);
+                                arrayReturn[5] = int.Parse(no);
                                 break;
                             }
                         }
-                    }  
+                    }
                 }
 
                 double minutes = double.Parse((string)workTable.Rows[job - 1]["ExecutionTime"]);
                 TimeSpan executionTime = TimeSpan.FromMinutes(minutes);
                 newListStartEndWorking[1] = newListStartEndWorking[0].Add(executionTime);
             }
-            else if (listReturn[0] == 3)
+            
+            if (arrayReturn[3] == 1)
             {
                 // There are 2 jobs performing on the same device simultaneously. 
                 // Assign the planned start as the previous planned end on this device
@@ -401,7 +413,8 @@ namespace TabuSearchProject
                 TimeSpan executionTime = TimeSpan.FromMinutes(minutes);
                 newListStartEndWorking[1] = newListStartEndWorking[0].Add(executionTime);
             }
-            else if (listReturn[0] == 4)
+            
+            if (arrayReturn[4] == 1)
             {
                 // A technician is assigned 2 jobs at the same time
                 for (int i = 0; i < deviceDictionary[nameOfDevice].Count; i++)
@@ -410,7 +423,7 @@ namespace TabuSearchProject
                     {
                         newListStartEndWorking[0] = deviceDictionary[nameOfDevice][0][0];
                     }
-                    else 
+                    else
                     if (deviceDictionary[nameOfDevice][i][0] <= listStartEndWorking[0] && listStartEndWorking[0] < deviceDictionary[nameOfDevice][i + 1][0])
                     {
                         // Find the range of start device's break time and assign the planned start as the next start of break time
@@ -475,16 +488,16 @@ namespace TabuSearchProject
             }
 
             // After modification, the planned date needs to double-check by checkTimeAvailable.
-            List<int> listTemp = checkTimeAvailable(nameOfDevice, listReturn, newListStartEndWorking, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
-            if (listTemp[0] == 0)
+            int[] arrayTemp = checkTimeAvailable(nameOfDevice, arrayReturn, newListStartEndWorking, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+            if (arrayTemp[0] == 1)
             {
                 return newListStartEndWorking;
             }
-            else if (listTemp[0] != 0)
+            else if (arrayTemp[0] != 1)
             {
                 // If the modified date still have an error, we must modify it again.
                 // This will be a loop recall changePlannedDate and checkTimeAvailable methods until this is suitable for implement
-                newListStartEndWorking = changePlannedDate(workTable, job, nameOfDevice, newListStartEndWorking, listTemp, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+                newListStartEndWorking = changePlannedDate(workTable, job, nameOfDevice, newListStartEndWorking, arrayTemp, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
                 return newListStartEndWorking;
             }
 
@@ -500,10 +513,10 @@ namespace TabuSearchProject
             // Create a List of DateTime with the start date and end date
             List<DateTime> listStartEndWorking = new List<DateTime> { startDate, endDate };
             string nameOfDevice = workTable.Rows[job - 1]["Device"].ToString();
-            Console.WriteLine("--------------------------------------------------------------");
-            Console.WriteLine($"Name of device: {nameOfDevice}. And this is job {job}");
+            //Console.WriteLine("--------------------------------------------------------------");
+            //Console.WriteLine($"Name of device: {nameOfDevice}. And this is job {job}");
             int numberWorkOnDevice = maintenanceDeviceBreakTime[nameOfDevice].Count;
-            Console.WriteLine($"Number of Work on device: {numberWorkOnDevice}");
+            //Console.WriteLine($"Number of Work on device: {numberWorkOnDevice}");
 
             if (numberWorkOnDevice == 0)
             {
@@ -522,44 +535,15 @@ namespace TabuSearchProject
                 listStartEndWorking[1] = listStartEndWorking[0].Add(executionTime);
             }
 
-            List<int> listReturn = new List<int> { 0, 0 };
+            int[] arrayReturn = new int[6];
             // Check: Is the planned date available?
-            listReturn = checkTimeAvailable(nameOfDevice, listReturn, listStartEndWorking, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
-            Console.WriteLine($"The number of fail: {listReturn[0]}");
+            arrayReturn = checkTimeAvailable(nameOfDevice, arrayReturn, listStartEndWorking, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+            //Console.WriteLine($"The Fail's number: {arrayReturn[0]} - {arrayReturn[1]} - {arrayReturn[2]} - {arrayReturn[3]} - {arrayReturn[4]}");
 
-            if (listReturn[0] == 0)
-            {   
+            if (arrayReturn[0] == 1)
+            {
                 // There is no error
                 listStartEndWorking = listStartEndWorking;
-
-                // Add the record into maintenanceDeviceBreakTime
-                List<List<DateTime>> listListDeviceBreakingTime = maintenanceDeviceBreakTime[nameOfDevice];
-                List<List<DateTime>> listListTempDevice = new List<List<DateTime>>();
-                foreach(List<DateTime> listTemp in listListDeviceBreakingTime)
-                {
-                    listListTempDevice.Add(listTemp);
-                }
-                listListTempDevice.Add(listStartEndWorking);
-                maintenanceDeviceBreakTime[nameOfDevice] = new List<List<DateTime>>();
-                maintenanceDeviceBreakTime[nameOfDevice] = listListTempDevice;
-
-                // Add the record into maintenanceTechnicianWorkTime
-                List<List<DateTime>> listListTechnicianWorkingTime = maintenanceTechnicianWorkTime[listReturn[1].ToString()];
-                List<List<DateTime>> listListTempTechnician = new List<List<DateTime>>();
-                foreach (List<DateTime> listTemp in listListTechnicianWorkingTime)
-                {
-                    listListTempTechnician.Add(listTemp);
-                }
-                listListTempTechnician.Add(listStartEndWorking);
-                maintenanceTechnicianWorkTime[listReturn[1].ToString()] = new List<List<DateTime>>();
-                maintenanceTechnicianWorkTime[listReturn[1].ToString()] = listListTempTechnician;
-            }
-            else
-            {
-                // Get the modified date by changePlannedDate
-                listStartEndWorking = changePlannedDate(workTable, job, nameOfDevice, listStartEndWorking, listReturn, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
-                // Get the sequence of Technician perform this job
-                listReturn = checkTimeAvailable(nameOfDevice, listReturn, listStartEndWorking, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
 
                 // Add the record into maintenanceDeviceBreakTime
                 List<List<DateTime>> listListDeviceBreakingTime = maintenanceDeviceBreakTime[nameOfDevice];
@@ -573,41 +557,70 @@ namespace TabuSearchProject
                 maintenanceDeviceBreakTime[nameOfDevice] = listListTempDevice;
 
                 // Add the record into maintenanceTechnicianWorkTime
-                List<List<DateTime>> listListTechnicianWorkingTime = maintenanceTechnicianWorkTime[listReturn[1].ToString()];
+                List<List<DateTime>> listListTechnicianWorkingTime = maintenanceTechnicianWorkTime[arrayReturn[5].ToString()];
                 List<List<DateTime>> listListTempTechnician = new List<List<DateTime>>();
                 foreach (List<DateTime> listTemp in listListTechnicianWorkingTime)
                 {
                     listListTempTechnician.Add(listTemp);
                 }
                 listListTempTechnician.Add(listStartEndWorking);
-                maintenanceTechnicianWorkTime[listReturn[1].ToString()] = new List<List<DateTime>>();
-                maintenanceTechnicianWorkTime[listReturn[1].ToString()] = listListTempTechnician;
+                maintenanceTechnicianWorkTime[arrayReturn[5].ToString()] = new List<List<DateTime>>();
+                maintenanceTechnicianWorkTime[arrayReturn[5].ToString()] = listListTempTechnician;
+            }
+            else
+            {
+                // Get the modified date by changePlannedDate
+                listStartEndWorking = changePlannedDate(workTable, job, nameOfDevice, listStartEndWorking, arrayReturn, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+                // Get the sequence of Technician perform this job
+                arrayReturn = checkTimeAvailable(nameOfDevice, arrayReturn, listStartEndWorking, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+
+                // Add the record into maintenanceDeviceBreakTime
+                List<List<DateTime>> listListDeviceBreakingTime = maintenanceDeviceBreakTime[nameOfDevice];
+                List<List<DateTime>> listListTempDevice = new List<List<DateTime>>();
+                foreach (List<DateTime> listTemp in listListDeviceBreakingTime)
+                {
+                    listListTempDevice.Add(listTemp);
+                }
+                listListTempDevice.Add(listStartEndWorking);
+                maintenanceDeviceBreakTime[nameOfDevice] = new List<List<DateTime>>();
+                maintenanceDeviceBreakTime[nameOfDevice] = listListTempDevice;
+
+                // Add the record into maintenanceTechnicianWorkTime
+                List<List<DateTime>> listListTechnicianWorkingTime = maintenanceTechnicianWorkTime[arrayReturn[5].ToString()];
+                List<List<DateTime>> listListTempTechnician = new List<List<DateTime>>();
+                foreach (List<DateTime> listTemp in listListTechnicianWorkingTime)
+                {
+                    listListTempTechnician.Add(listTemp);
+                }
+                listListTempTechnician.Add(listStartEndWorking);
+                maintenanceTechnicianWorkTime[arrayReturn[5].ToString()] = new List<List<DateTime>>();
+                maintenanceTechnicianWorkTime[arrayReturn[5].ToString()] = listListTempTechnician;
             }
 
-            Console.WriteLine();
-            Console.WriteLine($"The start and end planned date are: {listStartEndWorking[0]} - {listStartEndWorking[1]}");
-            Console.WriteLine();
-            // Print all of maintenance device's record
-            foreach (string key in maintenanceDeviceBreakTime.Keys)
-            {
-                Console.WriteLine($"The name of device is checked: {key}");
-                foreach (List<DateTime> listTime in maintenanceDeviceBreakTime[key])
-                {
-                    Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
-                }
-            }
+            //Console.WriteLine();
+            //Console.WriteLine($"The start and end planned date are: {listStartEndWorking[0]} - {listStartEndWorking[1]}");
+            //Console.WriteLine();
+            //// Print all of maintenance device's record
+            //foreach (string key in maintenanceDeviceBreakTime.Keys)
+            //{
+            //    Console.WriteLine($"The name of device is checked: {key}");
+            //    foreach (List<DateTime> listTime in maintenanceDeviceBreakTime[key])
+            //    {
+            //        Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
+            //    }
+            //}
 
-            Console.WriteLine();
-            // Print all of maintenance technician's record
-            foreach (string key in maintenanceTechnicianWorkTime.Keys)
-            {
-                Console.WriteLine($"The sequence of technician is checked: {key}");
-                foreach (List<DateTime> listTime in maintenanceTechnicianWorkTime[key])
-                {
-                    Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
-                }
-            }
-            Console.WriteLine();
+            //Console.WriteLine();
+            //// Print all of maintenance technician's record
+            //foreach (string key in maintenanceTechnicianWorkTime.Keys)
+            //{
+            //    Console.WriteLine($"The sequence of technician is checked: {key}");
+            //    foreach (List<DateTime> listTime in maintenanceTechnicianWorkTime[key])
+            //    {
+            //        Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
+            //    }
+            //}
+            //Console.WriteLine();
 
             return listStartEndWorking;
         }

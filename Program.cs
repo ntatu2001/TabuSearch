@@ -13,7 +13,7 @@ using TabuSearchProject;
 
 namespace ReadDataFromCSV
 {
-    public class Program : FindPlannedDate
+    public class Program : NewFindPlannedDate
     {
         /// <summary>
         /// Create a DataTable of Maintenance Deadlines and Tasks
@@ -397,7 +397,7 @@ namespace ReadDataFromCSV
         /// </summary>
         /// <param name="workTable"></param>
         /// <returns></returns>
-        public static List<int> tabuSearch(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
+        public static List<int> tabuSearch(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary)
         {
             int tenure = getTenure(workTable);
             List<List<int>> tabuList = new List<List<int>>();
@@ -408,6 +408,8 @@ namespace ReadDataFromCSV
             //    List<int> obj = new List<int> { 0, 0 };
             //    tabuList.Add(obj);
             //}
+            Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
+            Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
 
             List<int> currentSolution = initialSolution(workTable);
             double bestObjectValue = objectValue(currentSolution, workTable,deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
@@ -430,11 +432,41 @@ namespace ReadDataFromCSV
                     //{
                     //    Console.Write(item + " - ");
                     //}
+
+                    maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
+                    maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
+
                     double candidateObjectValue = objectValue(candidateSolution, workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
                     Console.WriteLine(key[0].ToString() + " - " + key[1].ToString());
                     Console.WriteLine(candidateObjectValue);
                     dictTabuAttribute[key] = candidateObjectValue;
                 }
+
+                Console.WriteLine();
+                // Print all of maintenance device's record
+                foreach (string key in maintenanceDeviceBreakTime.Keys)
+                {
+                    Console.WriteLine($"The name of device is checked: {key}");
+                    foreach (List<DateTime> listTime in maintenanceDeviceBreakTime[key])
+                    {
+                        Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
+                    }
+                }
+
+                Console.WriteLine();
+                // Print all of maintenance technician's record
+                foreach (string key in maintenanceTechnicianWorkTime.Keys)
+                {
+                    Console.WriteLine($"The sequence of technician is checked: {key}");
+                    foreach (List<DateTime> listTime in maintenanceTechnicianWorkTime[key])
+                    {
+                        Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
+                    }
+                }
+                Console.WriteLine();
+
+                maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
+                maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
 
                 //Select the move with the lowest ObjValue in the neighborhood (minimization)              
                 listBestPair = getBestPair(dictTabuAttribute, tabuList);
@@ -449,6 +481,7 @@ namespace ReadDataFromCSV
                 }
                 Console.WriteLine();
                 Console.WriteLine("---------------------------------------------------------");
+
 
                 if (listBestPair.Count > 0)
                 {
@@ -483,10 +516,10 @@ namespace ReadDataFromCSV
         /// </summary>
         /// <param name="workTable"></param>
         /// <returns></returns>
-        public static DataTable returnScheduledDataTable(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
+        public static DataTable returnScheduledDataTable(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary)
         {
             //Find the order of work such that the objective function value is minimal
-            List<int> bestSolution = tabuSearch(workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+            List<int> bestSolution = tabuSearch(workTable, deviceDictionary, technicianDictionary);
 
             //Create a new data table that includes the jobs sorted by bestSolution
             DataTable scheduledWorkTable = new DataTable();
@@ -535,17 +568,17 @@ namespace ReadDataFromCSV
             Dictionary<string, List<List<DateTime>>> deviceDictionary = getDeviceDictionary(deviceTable);
             Dictionary<string, List<List<DateTime>>> technicianDictionary = getTechnicianDictionary(technicianTable);
 
-            Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
-            Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
+            //Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
+            //Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
 
-            
-            List<int> solution = initialSolution(workTable);
-            foreach (int job in solution)
-            {
-                List<DateTime> listStartEndWorking = findPlannedDate(workTable, solution, job, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
-            }
 
-            //DataTable scheduledWorkTable = returnScheduledDataTable(workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+            //List<int> solution = initialSolution(workTable);
+            //foreach (int job in solution)
+            //{
+            //    List<DateTime> listStartEndWorking = findPlannedDate(workTable, solution, job, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+            //}
+
+            DataTable scheduledWorkTable = returnScheduledDataTable(workTable, deviceDictionary, technicianDictionary);
         }
     }
 }

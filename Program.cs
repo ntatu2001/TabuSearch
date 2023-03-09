@@ -227,16 +227,18 @@ namespace ReadDataFromCSV
         /// <param name="solution"></param>
         /// <param name="workTable"></param>
         /// <returns></returns>
-        public static double objectValue(List<int> solution, DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
+        public static double objectValue(List<int> solution, DataTable workTable, List<JobInfor> bestListWorkInfor, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary, Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime, Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime)
         {
             DateTime startDate = DateTime.Now;
             double objectValue = 0;
             DateTime endDate = DateTime.Now;
             foreach (int job in solution)
             {
-                List<DateTime> listStartEndWorking = findPlannedDate(workTable, solution, job, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
-                startDate = listStartEndWorking[0];
-                endDate = listStartEndWorking[1];
+                JobInfor workInfor = bestListWorkInfor[solution.IndexOf(job)];
+                workInfor = findPlannedDate(workTable, solution, job, workInfor, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+                bestListWorkInfor[solution.IndexOf(job)] = workInfor;
+                startDate = workInfor.startPlannedDate;
+                endDate = workInfor.endPlannedDate;
 
                 double differenceMinutes = 0;
                 DateTime dueDate = Convert.ToDateTime((string)workTable.Rows[job - 1]["DueDate"]);
@@ -399,22 +401,22 @@ namespace ReadDataFromCSV
         /// </summary>
         /// <param name="workTable"></param>
         /// <returns></returns>
-        public static List<int> tabuSearch(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary)
+        public static List<int> tabuSearch(DataTable workTable, List<JobInfor> bestListWorkInfor, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary)
         {
             int tenure = getTenure(workTable);
+            Console.WriteLine($"The Tenure: {tenure}");
             List<List<int>> tabuList = new List<List<int>>();
             List<int> listBestPair = new List<int>();
-            //Initialize Tabu List with all swap pairs [0, 0]
-            //for (int i = 0; i < tenure; i++)
-            //{
-            //    List<int> obj = new List<int> { 0, 0 };
-            //    tabuList.Add(obj);
-            //}
+            
             Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
             Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
-
             List<int> currentSolution = initialSolution(workTable);
-            double bestObjectValue = objectValue(currentSolution, workTable,deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+            for (int i = 0; i < currentSolution.Count; i++)
+            {
+                bestListWorkInfor[i].Id = currentSolution[i];
+            }
+
+            double bestObjectValue = objectValue(currentSolution, workTable, bestListWorkInfor, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
             List<int> bestSolution = currentSolution;
 
             int iterations = 50;
@@ -438,11 +440,12 @@ namespace ReadDataFromCSV
                     maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
                     maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
 
-                    double candidateObjectValue = objectValue(candidateSolution, workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+                    double candidateObjectValue = objectValue(candidateSolution, workTable, bestListWorkInfor, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
                     Console.WriteLine(key[0].ToString() + " - " + key[1].ToString());
                     Console.WriteLine(candidateObjectValue);
                     dictTabuAttribute[key] = candidateObjectValue;
                 }
+
 
                 Console.WriteLine();
                 // Print all of maintenance device's record
@@ -488,7 +491,7 @@ namespace ReadDataFromCSV
                 if (listBestPair.Count > 0)
                 {
                     currentSolution = swapPairs(bestSolution, listBestPair[0], listBestPair[1]);
-                    double currentObjectValue = objectValue(currentSolution, workTable, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+                    double currentObjectValue = objectValue(currentSolution, workTable, bestListWorkInfor, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
 
                     if (currentObjectValue < bestObjectValue)
                     {
@@ -509,6 +512,75 @@ namespace ReadDataFromCSV
             }
             Console.WriteLine(bestObjectValue);
 
+            List<DateTime> listStartDate = new List<DateTime>();
+            foreach (JobInfor workInfor in bestListWorkInfor)
+            {
+                listStartDate.Add(workInfor.startPlannedDate);
+            }
+
+            listStartDate.Sort();
+            Console.WriteLine();
+            Console.WriteLine("Print planned date for all job in Timeline");
+            for (int i = 0; i < listStartDate.Count; i++)
+            {
+                foreach (JobInfor workInfor in bestListWorkInfor)
+                {
+                    if (workInfor.startPlannedDate == listStartDate[i])
+                    {
+                        Console.WriteLine($"The job: {workInfor.Id}. Planned Date: {workInfor.startPlannedDate} - {workInfor.endPlannedDate}. Device: {workInfor.Device}. Technician: {workInfor.Technician}");
+                    }
+                }
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Print all of maintenance device's record");
+            foreach (string key in maintenanceDeviceBreakTime.Keys)
+            {
+                Console.WriteLine($"The name of device is checked: {key}");
+                List<DateTime> listStartDevice = new List<DateTime>();
+                foreach (List<DateTime> listTime in maintenanceDeviceBreakTime[key])
+                {
+                    listStartDevice.Add(listTime[0]);
+                }
+                listStartDevice.Sort();
+
+                for (int i = 0; i < listStartDevice.Count; i++)
+                {
+                    foreach (List<DateTime> listTime in maintenanceDeviceBreakTime[key])
+                    {
+                        if (listTime[0] == listStartDevice[i])
+                        {
+                            Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Print all of maintenance technician's record");
+            foreach (string key in maintenanceTechnicianWorkTime.Keys)
+            {
+                Console.WriteLine($"The sequence of technician is checked: {key}");
+                List<DateTime> listStartTechnician = new List<DateTime>();
+                foreach (List<DateTime> listTime in maintenanceTechnicianWorkTime[key])
+                {
+                    listStartTechnician.Add(listTime[0]);
+                }
+                listStartTechnician.Sort();
+
+                for (int i = 0; i < listStartTechnician.Count; i++)
+                {
+                    foreach (List<DateTime> listTime in maintenanceTechnicianWorkTime[key])
+                    {
+                        if (listTime[0] == listStartTechnician[i])
+                        {
+                            Console.WriteLine(listTime[0].ToString() + " " + listTime[1].ToString());
+                        }
+                    }
+                }
+            }
+            Console.WriteLine();
+
             return bestSolution;
         }
 
@@ -520,8 +592,15 @@ namespace ReadDataFromCSV
         /// <returns></returns>
         public static DataTable returnScheduledDataTable(DataTable workTable, Dictionary<string, List<List<DateTime>>> deviceDictionary, Dictionary<string, List<List<DateTime>>> technicianDictionary)
         {
+            List<JobInfor> bestListWorkInfor = new List<JobInfor>();
+            for (int i = 0; i < workTable.Rows.Count; i++)
+            {
+                JobInfor workInfor = new JobInfor(0, "", 0, DateTime.Now, DateTime.Now);
+                bestListWorkInfor.Add(workInfor);
+            }
+
             //Find the order of work such that the objective function value is minimal
-            List<int> bestSolution = tabuSearch(workTable, deviceDictionary, technicianDictionary);
+            List<int> bestSolution = tabuSearch(workTable, bestListWorkInfor, deviceDictionary, technicianDictionary);
 
             //Create a new data table that includes the jobs sorted by bestSolution
             DataTable scheduledWorkTable = new DataTable();
@@ -546,11 +625,13 @@ namespace ReadDataFromCSV
                 scheduledWorkTable.Rows.Add(newRow);
             }
 
-            Console.Write("The Work Table scheduled by Tabu Search");
-            foreach (DataRow row in scheduledWorkTable.Rows)
-            {
-                Console.WriteLine(row["No"] + " " + row["Priority"] + " " + row["Device"] + " " + row["Work"] + " " + row["DueDate"] + " " + row["ExecutionTime"] + " " + row["ReleaseDate"]);
-            }
+            //Console.Write("The Work Table scheduled by Tabu Search");
+            //foreach (DataRow row in scheduledWorkTable.Rows)
+            //{
+            //    Console.WriteLine(row["No"] + " " + row["Priority"] + " " + row["Device"] + " " + row["Work"] + " " + row["DueDate"] + " " + row["ExecutionTime"] + " " + row["ReleaseDate"]);
+            //}
+
+
 
             return scheduledWorkTable;
         }
@@ -570,17 +651,31 @@ namespace ReadDataFromCSV
             Dictionary<string, List<List<DateTime>>> deviceDictionary = getDeviceDictionary(deviceTable);
             Dictionary<string, List<List<DateTime>>> technicianDictionary = getTechnicianDictionary(technicianTable);
 
-            //Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
-            //Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
+            Dictionary<string, List<List<DateTime>>> maintenanceDeviceBreakTime = deviceStructure(deviceDictionary);
+            Dictionary<string, List<List<DateTime>>> maintenanceTechnicianWorkTime = technicianStructure(technicianDictionary);
 
+            //
+            //List<JobInfor> bestListWorkInfor = new List<JobInfor>();
+            //for (int i = 0; i < workTable.Rows.Count; i++)
+            //{
+            //    JobInfor workInfor = new JobInfor(0, "", 0, DateTime.Now, DateTime.Now);
+            //    bestListWorkInfor.Add(workInfor);
+            //}
 
             //List<int> solution = initialSolution(workTable);
+            //for (int i = 0; i < solution.Count; i++)
+            //{
+            //    bestListWorkInfor[i].Id = solution[i];
+            //}
+
             //foreach (int job in solution)
             //{
-            //    List<DateTime> listStartEndWorking = findPlannedDate(workTable, solution, job, deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
+            //    JobInfor workInfor = bestListWorkInfor[solution.IndexOf(job)];
+            //    workInfor = findPlannedDate(workTable, solution, job, workInfor,deviceDictionary, technicianDictionary, maintenanceDeviceBreakTime, maintenanceTechnicianWorkTime);
             //}
 
             DataTable scheduledWorkTable = returnScheduledDataTable(workTable, deviceDictionary, technicianDictionary);
+
         }
     }
 }
